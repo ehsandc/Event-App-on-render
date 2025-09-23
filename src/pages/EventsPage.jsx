@@ -7,15 +7,7 @@ import {
   Text,
   Input,
   Select,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalCloseButton,
-  ModalBody,
-  useDisclosure,
 } from "@chakra-ui/react";
-import AddEventForm from "../components/AddEventForm";
 
 const EventsPage = () => {
   const [events, setEvents] = useState([]);
@@ -24,7 +16,6 @@ const EventsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [error, setError] = useState(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
 
   // Fetch events from the server
   const fetchEvents = () => {
@@ -159,25 +150,6 @@ const EventsPage = () => {
           ))}
         </Box>
       </Box>
-
-      {/* Add Event Button */}
-      <Box p={4} textAlign="center">
-        <Button colorScheme="blue" onClick={onOpen}>
-          Add Event
-        </Button>
-      </Box>
-
-      {/* Add Event Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Add Event</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <AddEventForm onClose={onClose} refreshEvents={fetchEvents} />
-          </ModalBody>
-        </ModalContent>
-      </Modal>
     </Box>
   );
 };

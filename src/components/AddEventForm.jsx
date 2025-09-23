@@ -80,7 +80,13 @@ const AddEventForm = ({ onClose, refreshEvents }) => {
           <Input
             type="datetime-local"
             value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
+            onChange={(e) => {
+              setStartTime(e.target.value);
+              // If end time is before new start time, reset end time
+              if (endTime && e.target.value > endTime) {
+                setEndTime("");
+              }
+            }}
           />
         </FormControl>
 
@@ -90,6 +96,7 @@ const AddEventForm = ({ onClose, refreshEvents }) => {
           <Input
             type="datetime-local"
             value={endTime}
+            min={startTime} // Prevent selecting end time before start time
             onChange={(e) => setEndTime(e.target.value)}
           />
         </FormControl>
