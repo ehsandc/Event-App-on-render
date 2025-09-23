@@ -7,15 +7,13 @@ export const DataProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:3000/users")
+    fetch("/events.json")
       .then((response) => response.json())
-      .then((data) => setUsers(data))
-      .catch((error) => console.error("Error fetching users:", error));
-
-    fetch("http://localhost:3000/categories")
-      .then((response) => response.json())
-      .then((data) => setCategories(data))
-      .catch((error) => console.error("Error fetching categories:", error));
+      .then((data) => {
+        setUsers(data.users);
+        setCategories(data.categories);
+      })
+      .catch((error) => console.error("Error fetching data:", error));
   }, []);
 
   return (

@@ -9,11 +9,13 @@ import {
   VStack,
   Checkbox,
   CheckboxGroup,
+  useToast,
 } from "@chakra-ui/react";
 import { DataContext } from "../context/DataContext";
 
 const AddEventForm = ({ onClose, refreshEvents }) => {
   const { categories, users } = useContext(DataContext);
+  const toast = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [categoryIds, setCategoryIds] = useState([]);
@@ -23,12 +25,12 @@ const AddEventForm = ({ onClose, refreshEvents }) => {
   const [image, setImage] = useState("");
   const [availableImages, setAvailableImages] = useState([]);
 
-  // Fetch all image URLs dynamically
+  // Fetch all image URLs dynamically from static JSON
   useEffect(() => {
-    fetch("http://localhost:3000/events")
+    fetch("/events.json")
       .then((response) => response.json())
       .then((data) => {
-        const images = data.map((event) => event.image); // Extract image URLs
+        const images = data.events.map((event) => event.image); // Extract image URLs
         setAvailableImages(images);
       })
       .catch((error) => console.error("Error fetching images:", error));
@@ -37,30 +39,16 @@ const AddEventForm = ({ onClose, refreshEvents }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const newEvent = {
-      title,
-      description,
-      categoryIds,
-      createdBy: Number(createdBy),
-      startTime,
-      endTime,
-      image,
-    };
-
-    fetch("http://localhost:3000/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newEvent),
-    })
-      .then((response) => {
-        if (response.ok) {
-          refreshEvents(); // Refresh the events list
-          onClose(); // Close the modal
-        } else {
-          console.error("Failed to add event");
-        }
-      })
-      .catch((error) => console.error("Error adding event:", error));
+    // For static deployment, just show a message instead of actually submitting
+    toast({
+      title: "Add Event Not Available",
+      description: "This is a static demo. Adding events requires a backend server.",
+      status: "info",
+      duration: 4000,
+      isClosable: true,
+    });
+    
+    onClose(); // Close the modal
   };
 
   return (

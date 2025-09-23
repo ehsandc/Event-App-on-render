@@ -9,11 +9,13 @@ import {
   Checkbox,
   CheckboxGroup,
   Select,
+  useToast,
 } from "@chakra-ui/react";
 import { DataContext } from "../context/DataContext";
 
 const EditEventForm = ({ event, onClose, onEventUpdated }) => {
   const { users, categories } = useContext(DataContext);
+  const toast = useToast();
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
   const [categoryIds, setCategoryIds] = useState(event.categoryIds);
@@ -23,12 +25,12 @@ const EditEventForm = ({ event, onClose, onEventUpdated }) => {
   const [image, setImage] = useState(event.image);
   const [availableImages, setAvailableImages] = useState([]);
 
-  // Fetch all image URLs dynamically
+  // Fetch all image URLs dynamically from static JSON
   useEffect(() => {
-    fetch("http://localhost:3000/events")
+    fetch("/events.json")
       .then((response) => response.json())
       .then((data) => {
-        const images = data.map((event) => event.image); // Extract image URLs
+        const images = data.events.map((event) => event.image); // Extract image URLs
         setAvailableImages(images);
       })
       .catch((error) => console.error("Error fetching images:", error));
@@ -37,31 +39,16 @@ const EditEventForm = ({ event, onClose, onEventUpdated }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const updatedEvent = {
-      ...event,
-      title,
-      description,
-      categoryIds,
-      createdBy, // Use the selected existing creator
-      startTime,
-      endTime,
-      image,
-    };
-
-    fetch(`http://localhost:3000/events/${event.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedEvent),
-    })
-      .then((response) => {
-        if (response.ok) {
-          onEventUpdated(updatedEvent); // Notify parent component
-          onClose(); // Close the modal
-        } else {
-          console.error("Failed to update event");
-        }
-      })
-      .catch((error) => console.error("Error updating event:", error));
+    // For static deployment, just show a message instead of actually updating
+    toast({
+      title: "Edit Event Not Available",
+      description: "This is a static demo. Editing events requires a backend server.",
+      status: "info",
+      duration: 4000,
+      isClosable: true,
+    });
+    
+    onClose(); // Close the modal
   };
 
   return (
