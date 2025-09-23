@@ -8,7 +8,7 @@ const useFetchEvents = () => {
 
   const fetchEvents = () => {
     setLoading(true);
-    fetch("http://localhost:3000/events")
+    fetch("/events.json")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to fetch events");
@@ -16,7 +16,7 @@ const useFetchEvents = () => {
         return response.json();
       })
       .then((data) => {
-        setEvents(data);
+        setEvents(data.events);
         setError(null); // Clear any previous errors
       })
       .catch((error) => {

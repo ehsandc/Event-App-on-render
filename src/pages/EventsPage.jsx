@@ -28,7 +28,7 @@ const EventsPage = () => {
 
   // Fetch events from the server
   const fetchEvents = () => {
-    fetch("http://localhost:3000/events")
+    fetch("/events.json")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to fetch events");
@@ -36,7 +36,9 @@ const EventsPage = () => {
         return response.json();
       })
       .then((data) => {
-        setEvents(data);
+        setEvents(data.events);
+        setCategories(data.categories);
+        setUsers(data.users);
         setError(null); // Clear any previous errors
       })
       .catch((error) => {
@@ -46,20 +48,10 @@ const EventsPage = () => {
   };
 
   // Fetch categories from the server
-  useEffect(() => {
-    fetch("http://localhost:3000/categories")
-      .then((response) => response.json())
-      .then((data) => setCategories(data))
-      .catch((error) => console.error("Error fetching categories:", error));
-  }, []);
+  // Now handled in fetchEvents()
 
   // Fetch users (creators) from the server
-  useEffect(() => {
-    fetch("http://localhost:3000/users")
-      .then((response) => response.json())
-      .then((data) => setUsers(data))
-      .catch((error) => console.error("Error fetching users:", error));
-  }, []);
+  // Now handled in fetchEvents()
 
   useEffect(() => {
     fetchEvents();

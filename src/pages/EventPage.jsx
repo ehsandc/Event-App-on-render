@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   Box,
   Button,
@@ -20,7 +20,6 @@ import { DataContext } from "../context/DataContext";
 
 const EventPage = () => {
   const { id } = useParams(); // Get event ID from URL
-  const navigate = useNavigate();
   const [event, setEvent] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
@@ -32,14 +31,21 @@ const EventPage = () => {
 
   // Fetch event details
   useEffect(() => {
-    fetch(`http://localhost:3000/events/${id}`)
+    fetch("/events.json")
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Failed to fetch event");
+          throw new Error("Failed to fetch events");
         }
         return response.json();
       })
-      .then((data) => setEvent(data))
+      .then((data) => {
+        const foundEvent = data.events.find(event => event.id === parseInt(id));
+        if (foundEvent) {
+          setEvent(foundEvent);
+        } else {
+          throw new Error("Event not found");
+        }
+      })
       .catch((error) => {
         console.error("Error fetching event:", error);
         toast({ title: "Error loading event", status: "error" });
@@ -59,22 +65,13 @@ const EventPage = () => {
     ?.map((id) => categories?.find((category) => category.id === id)?.name)
     .join(", ");
 
-  // Handle delete event
+  // Handle delete event - disabled for static deployment
   const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this event?")) {
-      fetch(`http://localhost:3000/events/${id}`, {
-        method: "DELETE",
-      })
-        .then((response) => {
-          if (response.ok) {
-            toast({ title: "Event deleted successfully!", status: "success" });
-            navigate("/"); // Redirect to the main page
-          } else {
-            toast({ title: "Failed to delete event.", status: "error" });
-          }
-        })
-        .catch(() => toast({ title: "An error occurred.", status: "error" }));
-    }
+    toast({ 
+      title: "Delete functionality not available in demo mode", 
+      status: "info",
+      description: "This is a static demo. Delete functionality requires a backend server."
+    });
   };
 
   return (
