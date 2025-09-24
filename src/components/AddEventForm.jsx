@@ -14,7 +14,12 @@ import {
 import { DataContext } from "../context/DataContext";
 
 const AddEventForm = ({ onClose, refreshEvents }) => {
-  const { categories, users } = useContext(DataContext);
+  const {
+    categories = [],
+    users = [],
+    loading,
+    error,
+  } = useContext(DataContext) || {};
   const toast = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -33,23 +38,97 @@ const AddEventForm = ({ onClose, refreshEvents }) => {
         const images = data.events.map((event) => event.image); // Extract image URLs
         setAvailableImages(images);
       })
-      .catch((error) => console.error("Error fetching images:", error));
+      .catch(() => {
+        // Handle error silently for image fetching
+        setAvailableImages([]);
+      });
   }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // For static deployment, just show a message instead of actually submitting
+    // Validate required fields
+    if (!title || !description || !startTime || !endTime || !createdBy) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Please fill in all required fields.",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    // Validate that end time is after start time
+    if (new Date(endTime) <= new Date(startTime)) {
+      toast({
+        title: "Invalid Time Range",
+        description: "End time must be after start time.",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    // Create new event object
+    const newEvent = {
+      id: Date.now(), // Simple ID generation for demo
+      title,
+      description,
+      startTime,
+      endTime,
+      categoryIds,
+      createdBy: Number(createdBy),
+      image:
+        image ||
+        availableImages[Math.floor(Math.random() * availableImages.length)], // Random image if none selected
+    };
+
+    // Get existing events from localStorage or create empty array
+    const existingEvents = JSON.parse(
+      localStorage.getItem("localEvents") || "[]"
+    );
+
+    // Add new event to the beginning of the array
+    const updatedEvents = [newEvent, ...existingEvents];
+
+    // Save to localStorage
+    localStorage.setItem("localEvents", JSON.stringify(updatedEvents));
+
+    // Show success message
     toast({
-      title: "Add Event Not Available",
-      description: "This is a static demo. Adding events requires a backend server.",
-      status: "info",
+      title: "Event Added Successfully!",
+      description: `"${title}" has been added to your events.`,
+      status: "success",
       duration: 4000,
       isClosable: true,
     });
-    
-    onClose(); // Close the modal
+
+    // Refresh events if callback provided
+    if (refreshEvents) {
+      refreshEvents();
+    }
+
+    // Close the modal
+    onClose();
   };
+
+  if (loading) {
+    return (
+      <Box p={4} textAlign="center">
+        Loading form data...
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box p={4} textAlign="center" color="red.500">
+        Error loading form data: {error}
+      </Box>
+    );
+  }
 
   return (
     <Box as="form" onSubmit={handleSubmit}>

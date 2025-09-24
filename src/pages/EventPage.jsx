@@ -13,7 +13,18 @@ import {
   ModalHeader,
   ModalCloseButton,
   ModalBody,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
   useToast,
+  Spinner,
+  VStack,
+  HStack,
+  Badge,
+  Divider,
 } from "@chakra-ui/react";
 import EditEventForm from "../components/EditEventForm";
 import { DataContext } from "../context/DataContext";
@@ -22,8 +33,10 @@ const EventPage = () => {
   const { id } = useParams(); // Get event ID from URL
   const [event, setEvent] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
   const toast = useToast();
   const { users, categories } = useContext(DataContext);
+  const cancelRef = React.useRef();
 
   const handleEventUpdated = (updatedEvent) => {
     setEvent(updatedEvent); // Update the event state with the new data
@@ -39,7 +52,16 @@ const EventPage = () => {
         return response.json();
       })
       .then((data) => {
-        const foundEvent = data.events.find(event => event.id === parseInt(id));
+        // Get locally added events
+        const localEvents = JSON.parse(
+          localStorage.getItem("localEvents") || "[]"
+        );
+
+        // Combine local events with static events
+        const allEvents = [...localEvents, ...data.events];
+
+        // Find the event by ID
+        const foundEvent = allEvents.find((event) => event.id === parseInt(id));
         if (foundEvent) {
           setEvent(foundEvent);
         } else {
@@ -54,60 +76,147 @@ const EventPage = () => {
 
   // Ensure data is loaded before rendering
   if (!users || !categories || !event) {
-    return <Text>Loading...</Text>;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <VStack spacing={4}>
+          <Spinner size="xl" color="teal.500" thickness="4px" />
+          <Text color="gray.600">Loading event details...</Text>
+        </VStack>
+      </Box>
+    );
   }
 
   // Safely find the creator of the event
   const createdBy = users?.find((user) => user.id === event?.createdBy);
 
-  // Safely map category IDs to category names
-  const eventCategories = event?.categoryIds
-    ?.map((id) => categories?.find((category) => category.id === id)?.name)
-    .join(", ");
+  // Handle delete event - now works with localStorage
+  const handleDeleteClick = () => {
+    onDeleteOpen(); // Show confirmation dialog
+  };
 
-  // Handle delete event - disabled for static deployment
-  const handleDelete = () => {
-    toast({ 
-      title: "Delete functionality not available in demo mode", 
-      status: "info",
-      description: "This is a static demo. Delete functionality requires a backend server."
+  const handleConfirmDelete = () => {
+    // Get locally added events
+    const localEvents = JSON.parse(localStorage.getItem("localEvents") || "[]");
+
+    // Remove from localStorage
+    const updatedLocalEvents = localEvents.filter((e) => e.id !== parseInt(id));
+    localStorage.setItem("localEvents", JSON.stringify(updatedLocalEvents));
+
+    // Show success message
+    toast({
+      title: "Event deleted successfully!",
+      status: "success",
+      description: "The event has been removed.",
     });
+
+    // Trigger refresh on the main page
+    window.dispatchEvent(new CustomEvent("refreshEvents"));
+
+    // Close dialog and navigate back
+    onDeleteClose();
+    window.location.href = "/";
   };
 
   return (
-    <Box p={4}>
-      <Heading mb={4}>{event.title}</Heading>
-      <Image src={event.image} alt={event.title} mb={4} />
-      <Text fontSize="lg" mb={2}>
-        {event.description}
-      </Text>
-      <Text mb={2}>
-        <strong>Start:</strong> {new Date(event.startTime).toLocaleString()}
-      </Text>
-      <Text mb={4}>
-        <strong>End:</strong> {new Date(event.endTime).toLocaleString()}
-      </Text>
-      <Text mb={4}>
-        <strong>Categories:</strong> {eventCategories}
-      </Text>
-      <Text mb={4}>
-        <strong>Created By:</strong> {createdBy?.name}
-      </Text>
-      <Image
-        src={createdBy?.image}
-        alt={createdBy?.name}
-        boxSize="50px"
-        borderRadius="full"
-        mb={4}
-      />
+    <Box maxWidth="4xl" mx="auto" p={6}>
+      <VStack spacing={6} align="stretch">
+        {/* Header Section */}
+        <Box>
+          <Heading size="xl" mb={4} color="teal.600">
+            {event.title}
+          </Heading>
+          
+          {/* Category Tags */}
+          <HStack spacing={2} mb={4}>
+            {event.categoryIds.map((categoryId) => {
+              const category = categories.find(cat => cat.id === categoryId);
+              return category ? (
+                <Badge key={categoryId} colorScheme="blue" variant="subtle">
+                  {category.name}
+                </Badge>
+              ) : null;
+            })}
+          </HStack>
+        </Box>
 
-      {/* Edit Button */}
-      <Button colorScheme="blue" onClick={onOpen} mb={4}>
-        Edit Event
-      </Button>
+        {/* Event Image */}
+        <Image 
+          src={event.image} 
+          alt={event.title} 
+          borderRadius="lg"
+          maxHeight="400px"
+          width="100%"
+          objectFit="cover"
+          shadow="md"
+        />
+
+        {/* Event Details */}
+        <VStack spacing={4} align="stretch">
+          <Box>
+            <Text fontSize="lg" lineHeight="tall">
+              {event.description}
+            </Text>
+          </Box>
+
+          <Divider />
+
+          {/* Event Information Grid */}
+          <VStack spacing={3} align="stretch">
+            <HStack justify="space-between">
+              <Text fontWeight="semibold" color="gray.700">Start Time:</Text>
+              <Text>{new Date(event.startTime).toLocaleString()}</Text>
+            </HStack>
+            
+            <HStack justify="space-between">
+              <Text fontWeight="semibold" color="gray.700">End Time:</Text>
+              <Text>{new Date(event.endTime).toLocaleString()}</Text>
+            </HStack>
+            
+            <HStack justify="space-between">
+              <Text fontWeight="semibold" color="gray.700">Duration:</Text>
+              <Text>
+                {Math.round((new Date(event.endTime) - new Date(event.startTime)) / (1000 * 60 * 60))} hours
+              </Text>
+            </HStack>
+          </VStack>
+
+          <Divider />
+
+          {/* Creator Information */}
+          <Box>
+            <Text fontWeight="semibold" color="gray.700" mb={3}>Event Creator:</Text>
+            <HStack spacing={4}>
+              <Image
+                src={createdBy?.image}
+                alt={createdBy?.name}
+                boxSize="60px"
+                borderRadius="full"
+                border="2px solid"
+                borderColor="gray.200"
+              />
+              <Box>
+                <Text fontWeight="medium" fontSize="lg">{createdBy?.name}</Text>
+                <Text color="gray.600" fontSize="sm">Event Organizer</Text>
+              </Box>
+            </HStack>
+          </Box>
+        </VStack>
+
+        <Divider />
+
+        {/* Action Buttons */}
+        <HStack spacing={4} justify="center">
+          <Button colorScheme="blue" onClick={onOpen} size="lg">
+            Edit Event
+          </Button>
+          <Button colorScheme="red" onClick={handleDeleteClick} size="lg" variant="outline">
+            Delete Event
+          </Button>
+        </HStack>
+      </VStack>
 
       {/* Delete Button */}
-      <Button colorScheme="red" onClick={handleDelete} mb={4}>
+      <Button colorScheme="red" onClick={handleDeleteClick} mb={4}>
         Delete Event
       </Button>
 
@@ -126,6 +235,34 @@ const EventPage = () => {
           </ModalBody>
         </ModalContent>
       </Modal>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        isOpen={isDeleteOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onDeleteClose}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Event
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Are you sure you want to delete &ldquo;{event?.title}&rdquo;? This action cannot be undone.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onDeleteClose}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={handleConfirmDelete} ml={3}>
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };

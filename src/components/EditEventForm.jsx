@@ -33,21 +33,86 @@ const EditEventForm = ({ event, onClose, onEventUpdated }) => {
         const images = data.events.map((event) => event.image); // Extract image URLs
         setAvailableImages(images);
       })
-      .catch((error) => console.error("Error fetching images:", error));
+      .catch(() => {
+        // Handle error silently for image fetching
+        setAvailableImages([]);
+      });
   }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // For static deployment, just show a message instead of actually updating
-    toast({
-      title: "Edit Event Not Available",
-      description: "This is a static demo. Editing events requires a backend server.",
-      status: "info",
-      duration: 4000,
-      isClosable: true,
-    });
+    // Validate required fields
+    if (!title || !description || !startTime || !endTime) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Please fill in all required fields.",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    // Validate that end time is after start time
+    if (new Date(endTime) <= new Date(startTime)) {
+      toast({
+        title: "Invalid Time Range",
+        description: "End time must be after start time.",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    // Create updated event object
+    const updatedEvent = {
+      ...event,
+      title,
+      description,
+      startTime,
+      endTime,
+      categoryIds,
+      createdBy: Number(createdBy),
+      image: image || event.image,
+    };
+
+    // Check if this is a local event (from localStorage)
+    const localEvents = JSON.parse(localStorage.getItem('localEvents') || '[]');
+    const localEventIndex = localEvents.findIndex(e => e.id === event.id);
     
+    if (localEventIndex !== -1) {
+      // Update local event
+      localEvents[localEventIndex] = updatedEvent;
+      localStorage.setItem('localEvents', JSON.stringify(localEvents));
+      
+      toast({
+        title: "Event Updated Successfully!",
+        description: `"${title}" has been updated.`,
+        status: "success",
+        duration: 4000,
+        isClosable: true,
+      });
+      
+      // Update the event in the parent component
+      if (onEventUpdated) {
+        onEventUpdated(updatedEvent);
+      }
+      
+      // Trigger refresh on the main page
+      window.dispatchEvent(new CustomEvent('refreshEvents'));
+    } else {
+      // This is a static event - cannot be edited
+      toast({
+        title: "Cannot Edit Static Event",
+        description: "This event is from the demo data and cannot be edited. Only events you've added can be modified.",
+        status: "warning",
+        duration: 4000,
+        isClosable: true,
+      });
+    }
+
     onClose(); // Close the modal
   };
 
